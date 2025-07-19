@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Falling Stars</title>
+    <style>
+        /* General body styling to center the game */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #2c3e50; /* Dark background for space theme */
+            overflow: hidden; /* Prevent scrollbars */
+            font-family: 'Inter', sans-serif; /* Modern font */
+            color: #ecf0f1; /* Light text color */
+        }
+
+        /* Container for the canvas and game controls/messages */
+        .game-container {
+            position: relative;
+            background-color: #1a242f; /* Slightly lighter dark background for game area */
+            border-radius: 15px; /* Rounded corners for the container */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* Deep shadow */
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            max-width: 90vw; /* Responsive width */
+            max-height: 90vh; /* Responsive height */
+            box-sizing: border-box; /* Include padding in width/height */
+        }
+
+        /* Canvas styling */
+        canvas {
+            background-color: #0d1218; /* Even darker for the game area */
+            border: 3px solid #f1c40f; /* Yellow border */
+            border-radius: 10px; /* Rounded canvas corners */
+            display: block; /* Remove extra space below canvas */
+            width: 100%; /* Make canvas responsive within its container */
+            height: auto; /* Maintain aspect ratio */
+            aspect-ratio: 800 / 600; /* Fixed aspect ratio for canvas content */
+        }
+
+        /* Game UI elements */
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .game-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 25px 40px;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #f1c40f; /* Yellow for messages */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid #e67e22; /* Orange border */
+            z-index: 10; /* Ensure it's above canvas */
+            opacity: 0; /* Hidden by default */
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+
+        .game-message.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .start-button {
+            background: linear-gradient(145deg, #2ecc71, #27ae60); /* Green gradient */
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.3em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px #219d55; /* Darker green shadow */
+            transition: all 0.2s ease;
+            margin-top: 15px; /* Space from canvas */
+        }
+
+        .start-button:hover {
+            background: linear-gradient(145deg, #27ae60, #2ecc71);
+            box-shadow: 0 4px #219d55;
+            transform: translateY(2px);
+        }
+
+        .start-button:active {
+            box-shadow: 0 2px #219d55;
+            transform: translateY(4px);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-info">
+            <span id="scoreDisplay">Score: 0</span>
+            <span id="highScoreDisplay">High Score: 0</span>
+            <span id="timerDisplay">Time: 60s</span>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <button class="start-button" id="startButton">Start Game</button>
+
+        <div id="gameOverMessage" class="game-message">
+            Game Over!
+            <br>
+            Your Score: <span id="finalScore">0</span>
+            <br>
+            <button class="start-button" onclick="initGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Global Game State Variables ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const startButton = document.getElementById('startButton');
+        const gameOverMessage = document.getElementById('gameOverMessage');
+        const finalScoreSpan = document.getElementById('finalScore');
+
+        let gameRunning = false;
+        let animationFrameId = null; // To store requestAnimationFrame ID
+        let gameTimerInterval = null; // To store timer interval ID
+        let difficultyInterval = null; // To store difficulty increase interval ID
+        let starSpawnInterval = null; // To store star spawning interval ID
+
+        let score = 0;
+        let highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
+        let timeLeft = 60; // Game duration in seconds
+
+        // --- Basket Properties ---
+        const basket = {
+            width: 100,
+            height: 20,
+            x: (canvas.width / 2) - 50, // Centered initially
+            y: canvas.height - 30, // Near the bottom
+            speed: 8, // Pixels per frame
+            isMovingLeft: false,
+            isMovingRight: false,
+            touchStartX: 0 // For touch controls
+        };
+
+        // --- Star Properties ---
+        const stars = [];
+        const STAR_MIN_RADIUS = 8;
+        const STAR_MAX_RADIUS = 15;
+        const STAR_INITIAL_SPEED = 2; // Pixels per frame
+        const STAR_SPEED_INCREMENT = 0.5;
+        let currentStarSpeed = STAR_INITIAL_SPEED;
+        const STAR_SPAWN_INITIAL_INTERVAL = 1000; // milliseconds
+        const STAR_SPAWN_MIN_INTERVAL = 300; // min milliseconds
+        const STAR_SPAWN_DECREMENT = 50; // How much to reduce spawn interval
+        let currentStarSpawnInterval = STAR_SPAWN_INITIAL_INTERVAL;
+
+        // --- Utility Functions ---
+
+        /**
+         * Generates a random integer within a specified range.
+         * @param {number} min - The minimum value (inclusive).
+         * @param {number} max - The maximum value (inclusive).
+         * @returns {number} A random integer.
+         */
+        function getRandomInt(min, max) {
+            min = Math.ceil(min);
+            max = Math.floor(max);
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        /**
+         * Generates a random float within a specified range.
+         * @param {number} min - The minimum value (inclusive).
+         * @param {number} max - The maximum value (inclusive).
+         * @returns {number} A random float.
+         */
+        function getRandomFloat(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        /**
+         * Draws a 5-point star polygon on the canvas.
+         * @param {CanvasRenderingContext2D} context - The canvas 2D rendering context.
+         * @param {number} cx - Center X coordinate of the star.
+         * @param {number} cy - Center Y coordinate of the star.
+         * @param {number} outerRadius - The radius of the outer points of the star.
+         * @param {number} innerRadius - The radius of the inner points of the star.
+         */
+        function drawStar(context, cx, cy, outerRadius, innerRadius) {
+            const spikes = 5;
+            let rot = Math.PI / 2 * 3; // Start from top
+            let x, y;
+            const step = Math.PI / spikes;
+
+            context.beginPath();
+            context.moveTo(cx, cy - outerRadius); // First outer point
+
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                context.lineTo(x, y);
+                rot += step; // Move to next inner point angle
+
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                context.lineTo(x, y);
+                rot += step; // Move to next outer point angle
+            }
+            context.closePath();
+
+            context.fillStyle = 'yellow'; // Star color
+            context.fill();
+            context.strokeStyle = '#b08a00'; // Star outline color
+            context.lineWidth = 2;
+            context.stroke();
+        }
+
+        // --- Game Initialization & Reset ---
+
+        /**
+         * Initializes or resets the game state.
+         */
+        function initGame() {
+            // Reset game state variables
+            score = 0;
+            timeLeft = 60;
+            stars.length = 0; // Clear existing stars
+            currentStarSpeed = STAR_INITIAL_SPEED;
+            currentStarSpawnInterval = STAR_SPAWN_INITIAL_INTERVAL;
+
+            // Clear any active intervals or animation frames
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            if (gameTimerInterval) {
+                clearInterval(gameTimerInterval);
+            }
+            if (difficultyInterval) {
+                clearInterval(difficultyInterval);
+            }
+            if (starSpawnInterval) {
+                clearInterval(starSpawnInterval);
+            }
+
+            // Reset basket position
+            basket.x = (canvas.width / 2) - (basket.width / 2);
+            basket.isMovingLeft = false;
+            basket.isMovingRight = false;
+
+            // Update UI displays
+            scoreDisplay.textContent = `Score: ${score}`;
+            highScoreDisplay.textContent = `High Score: ${highScore}`;
+            timerDisplay.textContent = `Time: ${timeLeft}s`;
+
+            // Hide game over message and show start button
+            gameOverMessage.classList.remove('visible');
+            startButton.style.display = 'block'; // Ensure start button is visible
+            gameRunning = false; // Game is not running until started by button
+        }
+
+        /**
+         * Starts the game by setting initial conditions and activating game loops.
+         */
+        function startGame() {
+            if (gameRunning) return; // Prevent starting if already running
+
+            gameRunning = true;
+            startButton.style.display = 'none'; // Hide start button
+            gameOverMessage.classList.remove('visible'); // Hide game over message
+
+            // Start the main game loop
+            gameLoop();
+
+            // Start the game timer countdown
+            gameTimerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `Time: ${timeLeft}s`;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            // Increase difficulty (star speed) every 15 seconds
+            difficultyInterval = setInterval(() => {
+                currentStarSpeed += STAR_SPEED_INCREMENT;
+                // Optionally decrease spawn interval to make it harder
+                currentStarSpawnInterval = Math.max(STAR_SPAWN_MIN_INTERVAL, currentStarSpawnInterval - STAR_SPAWN_DECREMENT);
+                if (starSpawnInterval) {
+                    clearInterval(starSpawnInterval);
+                    starSpawnInterval = setInterval(spawnStar, currentStarSpawnInterval);
+                }
+            }, 15000); // Every 15 seconds
+
+            // Start spawning stars
+            starSpawnInterval = setInterval(spawnStar, currentStarSpawnInterval);
+        }
+
+        /**
+         * Ends the game, stops loops, and updates high score.
+         */
+        function endGame() {
+            gameRunning = false;
+
+            // Stop all game loops and intervals
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            if (gameTimerInterval) {
+                clearInterval(gameTimerInterval);
+            }
+            if (difficultyInterval) {
+                clearInterval(difficultyInterval);
+            }
+            if (starSpawnInterval) {
+                clearInterval(starSpawnInterval);
+            }
+
+            // Update high score if current score is higher
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+                highScoreDisplay.textContent = `High Score: ${highScore}`;
+            }
+
+            // Show game over message
+            finalScoreSpan.textContent = score;
+            gameOverMessage.classList.add('visible');
+        }
+
+        // --- Game Update Logic ---
+
+        /**
+         * Updates the basket's position based on key presses.
+         */
+        function updateBasket() {
+            if (basket.isMovingLeft) {
+                basket.x -= basket.speed;
+            }
+            if (basket.isMovingRight) {
+                basket.x += basket.speed;
+            }
+
+            // Keep basket within canvas bounds
+            if (basket.x < 0) {
+                basket.x = 0;
+            }
+            if (basket.x + basket.width > canvas.width) {
+                basket.x = canvas.width - basket.width;
+            }
+        }
+
+        /**
+         * Creates a new star and adds it to the stars array.
+         */
+        function spawnStar() {
+            if (!gameRunning) return; // Only spawn if game is running
+
+            const radius = getRandomFloat(STAR_MIN_RADIUS, STAR_MAX_RADIUS);
+            // Ensure star spawns fully within canvas width
+            const x = getRandomInt(radius, canvas.width - radius);
+            const y = -radius; // Start above the canvas
+            const speed = currentStarSpeed; // Use current difficulty speed
+
+            stars.push({ x, y, radius, speed });
+        }
+
+        /**
+         * Updates the position of all stars and removes those off-screen.
+         */
+        function updateStars() {
+            for (let i = stars.length - 1; i >= 0; i--) {
+                const star = stars[i];
+                star.y += star.speed;
+
+                // Remove star if it goes off-screen
+                if (star.y - star.radius > canvas.height) {
+                    stars.splice(i, 1);
+                }
+            }
+        }
+
+        /**
+         * Checks for collisions between the basket and falling stars.
+         */
+        function checkCollisions() {
+            for (let i = stars.length - 1; i >= 0; i--) {
+                const star = stars[i];
+
+                // Simple AABB collision detection:
+                // Check if star's bottom edge is below basket's top edge
+                // AND star's top edge is above basket's bottom edge
+                // AND star's right edge is to the right of basket's left edge
+                // AND star's left edge is to the left of basket's right edge
+                const starBottom = star.y + star.radius;
+                const starTop = star.y - star.radius;
+                const starLeft = star.x - star.radius;
+                const starRight = star.x + star.radius;
+
+                const basketTop = basket.y;
+                const basketBottom = basket.y + basket.height;
+                const basketLeft = basket.x;
+                const basketRight = basket.x + basket.width;
+
+                if (starBottom > basketTop &&
+                    starTop < basketBottom &&
+                    starRight > basketLeft &&
+                    starLeft < basketRight)
+                {
+                    // Collision detected!
+                    score++;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    stars.splice(i, 1); // Remove caught star
+                }
+            }
+        }
+
+        /**
+         * Main update function, called every frame to update game logic.
+         */
+        function update() {
+            updateBasket();
+            updateStars();
+            checkCollisions();
+        }
+
+        // --- Drawing Functions ---
+
+        /**
+         * Draws the basket on the canvas.
+         * @param {CanvasRenderingContext2D} context - The canvas 2D rendering context.
+         * @param {object} basketObj - The basket object with x, y, width, height.
+         */
+        function drawBasket(context, basketObj) {
+            context.fillStyle = '#8B4513'; // Brown color for basket
+            context.beginPath();
+            context.roundRect(basketObj.x, basketObj.y, basketObj.width, basketObj.height, 5); // Rounded rectangle
+            context.fill();
+            context.strokeStyle = '#5A2C0A'; // Darker brown outline
+            context.lineWidth = 2;
+            context.stroke();
+        }
+
+        /**
+         * Draws all stars currently in the game.
+         * @param {CanvasRenderingContext2D} context - The canvas 2D rendering context.
+         */
+        function drawAllStars(context) {
+            stars.forEach(star => {
+                drawStar(context, star.x, star.y, star.radius, star.radius * 0.4); // Inner radius is 40% of outer
+            });
+        }
+
+        /**
+         * Clears the entire canvas.
+         * @param {CanvasRenderingContext2D} context - The canvas 2D rendering context.
+         */
+        function clearCanvas(context) {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        /**
+         * Main draw function, called every frame to render game elements.
+         */
+        function draw() {
+            clearCanvas(ctx);
+            drawAllStars(ctx);
+            drawBasket(ctx, basket);
+            // Score, High Score, and Timer are drawn directly via DOM updates
+        }
+
+        // --- Main Game Loop ---
+
+        /**
+         * The core game loop that updates and draws the game state.
+         */
+        function gameLoop() {
+            if (!gameRunning) return; // Stop loop if game is not running
+
+            update(); // Update game logic
+            draw();   // Draw game elements
+
+            // Request the next animation frame for smooth rendering
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // --- Event Listeners ---
+
+        /**
+         * Handles keyboard keydown events for basket movement.
+         * @param {KeyboardEvent} event - The keyboard event object.
+         */
+        function handleKeyDown(event) {
+            if (!gameRunning) return;
+            if (event.key === 'ArrowLeft' || event.key === 'a') {
+                basket.isMovingLeft = true;
+            } else if (event.key === 'ArrowRight' || event.key === 'd') {
+                basket.isMovingRight = true;
+            }
+        }
+
+        /**
+         * Handles keyboard keyup events to stop basket movement.
+         * @param {KeyboardEvent} event - The keyboard event object.
+         */
+        function handleKeyUp(event) {
+            if (!gameRunning) return;
+            if (event.key === 'ArrowLeft' || event.key === 'a') {
+                basket.isMovingLeft = false;
+            } else if (event.key === 'ArrowRight' || event.key === 'd') {
+                basket.isMovingRight = false;
+            }
+        }
+
+        // Touch event handling for mobile devices
+        let touchStartX = 0;
+        const TOUCH_THRESHOLD = 20; // Minimum swipe distance to register movement
+
+        /**
+         * Handles touchstart event to record initial touch position.
+         * @param {TouchEvent} event - The touch event object.
+         */
+        function handleTouchStart(event) {
+            if (!gameRunning) return;
+            touchStartX = event.touches[0].clientX;
+        }
+
+        /**
+         * Handles touchmove event to move the basket based on swipe direction.
+         * @param {TouchEvent} event - The touch event object.
+         */
+        function handleTouchMove(event) {
+            if (!gameRunning) return;
+            const currentTouchX = event.touches[0].clientX;
+            const deltaX = currentTouchX - touchStartX;
+
+            // Only move if a significant swipe is detected
+            if (Math.abs(deltaX) > TOUCH_THRESHOLD) {
+                if (deltaX < 0) { // Swiping left
+                    basket.x -= basket.speed;
+                } else { // Swiping right
+                    basket.x += basket.speed;
+                }
+                // Update touchStartX to current position for continuous movement
+                touchStartX = currentTouchX;
+            }
+            // Prevent default touch behavior (like scrolling)
+            event.preventDefault();
+        }
+
+        /**
+         * Handles touchend event to stop basket movement.
+         * @param {TouchEvent} event - The touch event object.
+         */
+        function handleTouchEnd(event) {
+            // No specific action needed for touchend as movement is continuous via touchmove
+            // and `isMoving` flags are not used for touch.
+            // If you wanted discrete swipes, you'd calculate final delta here and reset touchStartX.
+        }
+
+        // --- Canvas Resizing ---
+
+        /**
+         * Adjusts canvas size and redraws content on window resize.
+         * This ensures the game remains responsive.
+         */
+        function resizeCanvas() {
+            // Get the computed style of the game container to determine available space
+            const container = document.querySelector('.game-container');
+            const containerWidth = container.clientWidth - (2 * 20); // Subtract padding
+            const containerHeight = container.clientHeight - (2 * 20) - 60; // Subtract padding and info bar height (approx)
+
+            // Calculate the aspect ratio (800 / 600 = 4 / 3)
+            const aspectRatio = 800 / 600;
+
+            let newCanvasWidth = containerWidth;
+            let newCanvasHeight = containerWidth / aspectRatio;
+
+            // If the calculated height exceeds the container's height, scale down by height
+            if (newCanvasHeight > containerHeight) {
+                newCanvasHeight = containerHeight;
+                newCanvasWidth = containerHeight * aspectRatio;
+            }
+
+            // Set the canvas element's drawing buffer size (important for drawing quality)
+            canvas.width = 800; // Keep internal resolution fixed for drawing
+            canvas.height = 600;
+
+            // Set the canvas element's display size (CSS size)
+            canvas.style.width = `${newCanvasWidth}px`;
+            canvas.style.height = `${newCanvasHeight}px`;
+
+            // Re-draw game elements if game is running to adapt to new display size
+            if (gameRunning || !gameOverMessage.classList.contains('visible')) {
+                draw(); // Redraw static elements like basket, stars (if any)
+            }
+            // Adjust basket position to be centered relative to the new canvas width, not its display size
+            basket.x = (canvas.width / 2) - (basket.width / 2);
+            basket.y = canvas.height - 30; // Keep at the bottom
+        }
+
+
+        // --- Initial Setup on Window Load ---
+        window.onload = function() {
+            // Initialize the game state when the page loads
+            initGame();
+            // Set up initial canvas size and resize listener
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // Add event listeners for keyboard controls
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', handleKeyUp);
+
+            // Add event listeners for touch controls
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd);
+
+            // Add click listener for the start button
+            startButton.addEventListener('click', startGame);
+        };
+    </script>
+</body>
+</html>
