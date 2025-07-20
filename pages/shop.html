@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop - Perfume.in</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/shop.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <img src="https://cdn-icons-png.flaticon.com/512/2933/2933188.png" alt="Perfume Logo">
+                <h1>Perfume.in</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="shop.html" class="active">Shop</a></li>
+                <li><a href="men.html">Men</a></li>
+                <li><a href="women.html">Women</a></li>
+                <li><a href="premium.html">Premium</a></li>
+                <li><a href="combos.html">Combos</a></li>
+                <li><a href="cart.html">Cart</a></li>
+                <li><a href="login.html">Login</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero Banner -->
+    <section class="hero">
+        <div class="hero-text">
+            <h2>1000+ Recreated Designer Fragrances</h2>
+            <p>Find your signature scent from our extensive collection</p>
+            <button class="cta-button">Explore Collection</button>
+        </div>
+    </section>
+
+    <!-- Filters Section -->
+    <section class="filters">
+        <div class="container">
+            <div class="filter-controls">
+                <select id="category-filter">
+                    <option value="">All Categories</option>
+                    <option value="men">Men</option>
+                    <option value="women">Women</option>
+                    <option value="unisex">Unisex</option>
+                </select>
+                <select id="price-filter">
+                    <option value="">All Prices</option>
+                    <option value="0-500">Under ₹500</option>
+                    <option value="500-1000">₹500 - ₹1000</option>
+                    <option value="1000-2000">₹1000 - ₹2000</option>
+                    <option value="2000+">Above ₹2000</option>
+                </select>
+                <input type="text" id="search-input" placeholder="Search perfumes...">
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section class="products">
+        <div class="container">
+            <div class="product-grid" id="product-grid">
+                <div class="product-card" data-category="men" data-price="750">
+                    <img src="https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcReTTpc2D1I9eGOxQSrLqn3WfcwVfaqlNnCQHmXwnxp3Gmh6vPt7yJfTx2snf3bPUUSAOwwQJ5Rr-W5bsRNpOSGDRHKZ4_-ZiLMQgHUpTcnF6O5RBSVoCJb" alt="GODFATHER">
+                    <div class="product-info">
+                        <h4>Creed</h4>
+                        <p>Creed Aventus type Perfume</p>
+                        <p class="price"><span class="old">Rs. 1,500</span> Rs. 750</p>
+                        <button class="add-to-cart" data-id="1" data-name="Creed Aventus" data-price="750">Add to Cart</button>
+                    </div>
+                </div>
+
+                <div class="product-card" data-category="men" data-price="750">
+                    <img src="https://encrypted-tbn2.gstatic.com/shopping?q=tbn:ANd9GcRSIRTlsci9Ib_kmDNRMaWOlJ1AjHx4kUUuUDL75ew-hBtIoA9yuzzE3tW271gAofUET-WJ_TzcwLr92yUckoVFSsVcyWdy4z66RaK62_E-UUAPH9Kxh-ydtYk" alt="PARK AVENUE">
+                    <div class="product-info">
+                        <h4>Tom Ford</h4>
+                        <p>Oud Wood type Perfume</p>
+                        <p class="price"><span class="old">Rs. 1,500</span> Rs. 750</p>
+                        <button class="add-to-cart" data-id="2" data-name="Tom Ford Oud Wood" data-price="750">Add to Cart</button>
+                    </div>
+                </div>
+
+                <div class="product-card" data-category="men" data-price="750">
+                    <img src="https://encrypted-tbn0.gstatic.com/shopping?q=tbn:ANd9GcTWmdCHkt2cKKnrLItHhdeaJBDMpZABrlnR5AetzbII5j96hsiPFYs35aGGtgGhAKAgtiWxc-y6uxwNTaRUhM1XNlG3X9Lt6Jsb36Y3YOqEjCJ99aF7ukzS" alt="WILD STONE">
+                    <div class="product-info">
+                        <h4>Versace</h4>
+                        <p>Versace Eros type Perfume</p>
+                        <p class="price"><span class="old">Rs. 1,500</span> Rs. 750</p>
+                        <button class="add-to-cart" data-id="3" data-name="Versace Eros" data-price="750">Add to Cart</button>
+                    </div>
+                </div>
+
+                <!-- More products will be loaded dynamically -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>About Perfume.in</h3>
+                    <p>Your trusted destination for premium quality fragrances inspired by luxury brands.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="about.html">About Us</a></li>
+                        <li><a href="contact.html">Contact</a></li>
+                        <li><a href="privacy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms & Conditions</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Contact Info</h3>
+                    <p>Email: info@perfume.in</p>
+                    <p>Phone: +91 9876543210</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Perfume.in. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/shop.js"></script>
+</body>
+</html>
